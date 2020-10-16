@@ -55,5 +55,12 @@ CHIP ALU {
 	Mux16(a=xandy, b=xplusy, sel=f, out=xy); // Pick between x + y or x & y
 	
 	Not16(in=xy, out=nxy); // out = !out
-	Mux16(a=xy, b=nxy, sel=no, out=out); // Pick between !out or out
+	
+	// Pick between !out or out. Additional logic for zr and ng
+	Mux16(a=xy, b=nxy, sel=no, out[15]=ng, out[0..7]=port1, out[8..15]=port2, out=out);
+	
+	Or8Way(in=port1, out=or1);
+	Or8Way(in=port2, out=or2);
+	Or(a=or1, b=or2, out=nzr);
+	Not(in=nzr, out=zr);
 }
