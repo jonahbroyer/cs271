@@ -38,9 +38,22 @@ CHIP ALU {
 
     OUT 
         out[16], // 16-bit output
-        zr, // 1 if (out == 0), 0 otherwise
-        ng; // 1 if (out < 0),  0 otherwise
+        zr, //1 if (out == 0), 0 otherwise
+        ng; //1 if (out < 0),  0 otherwise
 
     PARTS:
-   // Put you code here:
+	Mux16(a=x, b=false, sel=zx, out=x1); // Pick between x = 0 or x = x
+	Not16(in=x1, out=nx1); // x = !x
+	Mux16(a=x1, b=nx1, sel=nx, out=x2); // Pick between x or !x
+	
+	Mux16(a=y, b=false, sel=zy, out=y1); // Pick between y = 0 or y = y
+	Not16(in=y1, out=ny1); // y = !y	
+	Mux16(a=y1, b=ny1, sel=ny, out=y2); // Pick between y or !y
+	
+	Add16(a=x2, b=y2, out=xplusy); // out = x + y
+	And16(a=x2, b=y2, out=xandy); // out = x & y
+	Mux16(a=xandy, b=xplusy, sel=f, out=xy); // Pick between x + y or x & y
+	
+	Not16(in=xy, out=nxy); // out = !out
+	Mux16(a=xy, b=nxy, sel=no, out=out); // Pick between !out or out
 }
