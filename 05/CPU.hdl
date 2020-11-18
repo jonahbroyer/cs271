@@ -24,6 +24,26 @@
  * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather 
  * than to the address resulting from executing the current instruction. 
  */
+ 
+// A Instruction
+// 		instruction[0..14] = constant
+// C Instruction
+//		instruction[0..2]  = jump
+//			instruction[0] = j3 jump if < 0
+//			instruction[1] = j2 jump if 0
+//			instruction[2] = j1 jump if > 0
+//		instruction[3..5]  = destination
+//			instruction[3] = d3 write to Memory
+//			instruction[4] = d2 load D register
+//			instruction[5] = d1 load A register
+// 		instruction[6..11] = comp
+//			instruction[6] = c6 no
+//			instruction[7] = c5 f
+//			instruction[8] = c4 ny
+//			instruction[9] = c3 zy
+//			instruction[10]= c2 nx
+//			instruction[11]= c1 zx
+// 		instruction[12]    = a
 
 CHIP CPU {
 
@@ -39,5 +59,49 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    Not(in=instruction[15],out=ainstruction);
+	Not(in=ainstruction,out=cinstruction);
+	
+	//A Register
+	And(a=cinstruction,b=instruction[5],out=aout);
+	Mux16(a=instruction,b=alu,sel=instruction[15],out=newa);
+	Or(a=ainstruction,b=aout,out=loada);
+	ARegister(in=newa,load=loada,out=a);
+	
+	//D Register
+	And(a=instruction[4],b=cinstruction,out=loadd);
+	DRegister(in=alu,load=loadd,out=d);
+	
+	//ALU
+	Mux16(a=a,b=inM,sel=instruction[12],out=aOrm);
+	And(a=instruction[11],b=true,out=zx);
+	And(a=instruction[10],b=true,out=nx);
+	And(a=instruction[9],b=true,out=zy);
+	And(a=instruction[8],b=true,out=ny);
+	And(a=instruction[7],b=true,out=f);
+	And(a=instruction[6],b=true,out=no);
+	ALU(x=d,y=aOrm,zx=zx,nx=nx,zy=zy,ny=ny,f=f,no=no,out=alu,zr=zr,ng=ng);
+	
+	//Jump
+	Not(in=zr,out=notzr);
+	Not(in=ng,out=notng);
+	And(a=notzr,b=notng,out=pos);
+	And(a=instruction[2],b=ng,out=jlt);
+	And(a=instruction[1],b=zr,out=jz);
+	And(a=instruction[0],b=pos,out=jpos);
+	Or(a=jlt,b=jz,out=jltz);
+	Or(a=jltz,b=jpos,out=jump);
+	And(a=cinstruction,b=jump,out=mayjump);
+	
+	//writeM
+	And(a=cinstruction,b=instruction[3],out=writeM);
+	
+	//addressM
+	And16(a=a,b=true,out[0..14]=addressM);
+	
+	//outM
+	And16(a=alu,b=true,out=outM);
+	
+	//PC
+	PC(in=a,load=mayjump,inc=true,reset=reset,out[0..14]=pc);	
 }
